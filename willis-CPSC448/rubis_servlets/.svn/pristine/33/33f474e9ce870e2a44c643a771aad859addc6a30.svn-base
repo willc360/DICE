@@ -1,0 +1,250 @@
+package remoting;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+
+import remoting.*;
+import edu.rice.rubis.servlets.*;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletResponse;
+
+import org.aspectj.lang.Signature;
+
+import com.sun.security.sasl.ServerFactoryImpl;
+
+import java.io.ObjectStreamException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.GregorianCalendar;
+import java.io.Serializable;
+
+
+public aspect MainAspect {
+	
+	// Redirect URL
+	private String redirect_url = "http://localhost:9080/rubis_servlets/Remoting";
+		
+	declare parents: edu.rice.rubis.servlets.Auth implements java.io.Serializable;
+
+	public void edu.rice.rubis.servlets.SearchItemsByCategory.init() {
+		try {
+			RemotingManager.getInstance().addService(this);
+			super.init();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	pointcut readResolve() : 
+		execution(Object readResolve() throws ObjectStreamException) &&
+		within(ConnectionProxy);
+
+	Object around() : readResolve() {
+		Connection con = null;
+		try {
+			Class.forName("com.mysql.jdbc.Driver").newInstance();
+			con = DriverManager.getConnection("jdbc:mysql://localhost:3306/rubis?user=root&password=");
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+		return con;
+	}
+
+
+	pointcut rubis() :
+		//AboutMe
+		call(boolean listItem(Integer, Connection, ServletPrinter)) ||
+		call(boolean listBoughtItems(Integer, PreparedStatement, 
+				Connection, ServletPrinter)) ||
+		call(boolean listWonItems(Integer, PreparedStatement, 
+				Connection, ServletPrinter)) ||
+		call(boolean listComment(Integer, PreparedStatement, 
+				Connection, ServletPrinter)) ||
+		call(boolean listBids(Integer, String, String, 
+				PreparedStatement, Connection, ServletPrinter)) ||
+		//Auth
+		//			call(Auth.new(Connection, ServletPrinter)) ||
+		call(int authenticate(String, String)) ||
+		//BrowseCategories
+		//			call(boolean categoryList(int, int, PreparedStatement, Connection, 
+		//					ServletPrinter)) ||
+		//BrowseRegions
+		call(void regionList(ServletPrinter)) ||
+		//BuyNow
+		//BuyNowAuth
+		//PutBid
+		//PutBidAuth
+		//PutComment
+		//PutCommentAuth
+		//RegisterUser
+		//RubisHttpServlet
+		//RubisHttpServlet2
+		//init?
+		//test by browse items by category
+		(call(Connection getConnection()) && !(target(java.sql.PreparedStatement))) ||
+		// SearchItemsByCategory
+		call(void itemList(Integer, String, int, int, ServletPrinter)) ||
+		// SearchItemsByRegion
+		// test with LA antique
+		call(void itemList(Integer, Integer, int, int, ServletPrinter)) ||
+		// SellItemForm
+		// ServletPrinter
+		//call(ServletPrinter.new(HttpServletResponse, String)) ||
+		//try bid on item
+		call(void printFile(String)) ||
+		call(void printHTMLheader(String)) ||
+		call(void printHTMLfooter()) ||
+		call(void printHTML(String)) ||
+		// test in about me page
+		call(void printHTMLHighlighted(String)) ||
+		call(void printCategory(String, int)) ||
+		call(void printCategoryByRegion(String, int, int)) ||
+		call(void printCategoryToSellItem(String, int, int)) ||
+		// Called in regionList
+		call(void printRegion(String)) ||
+		// Called in ItemList
+		call(void printItemHeader()) ||
+		call(void printItem(String, int, float, int, String)) ||
+		// Called by listbids/listBoughtItems/listItem/listWonItems 
+		call(void printItemFooter()) ||
+		// Called by listItem
+		call(void printItemFooter(String, String)) ||
+		call(void printItemDescription(int, String, String, float, 
+				float, float, int, float, int, String, int, String,
+				String, int, Connection))  ||
+		// Won't be called (listbids), need to modified query in listbids to work
+		call(void printUserBidsHeader()) ||
+		// Won't be called (listbids), need to modified query in listbids to work
+		call(void printItemUserHasBidOn(int, String, float, int, String, String, 
+				int, String, float, float, String, String)) ||
+		// Called in listWonItems (test with user732110)
+		call(void printUserWonItemHeader()) ||
+		call(void printUserWonItem(int, String, float, int, String)) ||
+		// Called in listBoughtItems, but currently disabled, works anyways (test with user test)
+		call(void printUserBoughtItemHeader()) ||
+		call(void printUserBoughtItem(int, String, float, int, int, String)) ||
+		// Called in listItem, thus won't ever be remotely called
+		call(void printSellHeader(String)) ||
+		// Called in listItem, thus won't ever be remotely called
+		call(void printSell(int, String, float, float, int, float, String, 
+				String, float)) ||
+		call(void printItemDescriptionToBuyNow(int, String, String, float, int, 
+				int, String, String, String, int)) ||
+		call(void printBidHistoryHeader()) ||
+		call(void printBidHistoryFooter()) ||
+		call(void printBidHistory(int, String, float, String)) ||
+		call(void printCommentHeader()) ||
+		call(void printComment(String, int, String, String)) ||
+		call(void printCommentFooter()) ||
+		// StoreBuyNow
+		// StoreComment
+		// TimeManagement
+		// Static methods -> NullPointer
+		call(String currentDateToString()) ||
+		call(String dateToString(GregorianCalendar)) ||
+		call(String diffTime(GregorianCalendar, GregorianCalendar)) ||
+		call(GregorianCalendar addDays(GregorianCalendar, int)) ||
+		// ViewBidHistory
+//		call(boolean listBids(Integer, 
+		//					PreparedStatement, 
+		//					Connection, 
+		//					ServletPrinter)) ||
+		// ViewItem
+		// try to bid and not type in a bid
+		call(void printError(String, ServletPrinter)) ||
+		// ViewUserInfo
+//		call(int getPoolSize()) ;//|| 
+		call(boolean commentList(Integer, 
+				PreparedStatement, 
+				Connection, 
+				ServletPrinter));
+
+
+	private Class getPrimitiveClass(String type) {
+		if(type.equals("byte")) return byte.class;
+		if(type.equals("char")) return char.class;
+		if(type.equals("int")) return int.class;
+		if(type.equals("long")) return long.class;
+		if(type.equals("float")) return float.class;
+		if(type.equals("double")) return double.class;
+		throw new RuntimeException();
+	}
+	
+	private Method getMethodHelper(Class target_class, String method_name, Class[] args_classes) {
+		// Get methods declared in super class
+		while (true) {
+			try {
+				return target_class.getDeclaredMethod(method_name, args_classes);
+			} catch (NoSuchMethodException e) {
+				target_class = target_class.getSuperclass();
+			}
+		}
+	}
+
+	Object around() : rubis() && !cflow(call(* *.upCall(..))) {
+		RemotingManager remote_mgr = RemotingManager.getInstance();
+		Object target = thisJoinPoint.getTarget();
+		Object[] args = thisJoinPoint.getArgs();
+		String method_name = thisJoinPoint.getSignature().getName();
+		Class[] args_classes = new Class[args.length];
+		String sig_long = thisJoinPoint.getSignature().toLongString();
+		// Get arguments
+		String[] temp = sig_long.split("\\(")[1].split("\\)");
+		// Check methods with no argument
+		String[] args_type = new String[0];
+		if (temp.length > 0) {
+			args_type = temp[0].split(", ");
+		}
+		// Assign classes, could get away with this if RemotingManager 
+		// exposes getPrimitiveClass
+		for (int i = 0; i < args.length; i++) {
+			if (args_type[i].equals(""))
+				break;
+			try {
+				args_classes[i] = Class.forName(args_type[i]);
+			} catch (ClassNotFoundException e) {
+				args_classes[i] = getPrimitiveClass(args_type[i]);
+			}
+		}
+
+		try {
+			
+			Method m = null;
+			Class target_class = null;
+			if (target == null) {
+				String classname = thisJoinPoint.getStaticPart().getSignature().getDeclaringTypeName();
+				target_class = Class.forName(classname);			
+			}
+			else {
+				target_class = target.getClass();
+			}
+			m = getMethodHelper(target_class, method_name, args_classes);
+			
+			// Get fully qualified class name for static methods as
+			// required by RemotingManager.downCall
+			if (Modifier.isStatic(m.getModifiers())) {
+				target = target_class.getName();
+			}
+
+			return remote_mgr.downCall(redirect_url, 
+					m,
+					target,
+					args);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	pointcut preparedStatements() :
+		call(PreparedStatement java.sql.Connection.prepareStatement(String) throws java.sql.SQLException) &&
+		!within(PreparedStatementProxy);
+	
+	Object around() : preparedStatements() && !cflow(call(* *.upCall(..))) {
+//		return new PreparedStatementWrapper((String)thisJoinPoint.getArgs()[0], 
+//				thisJoinPoint.getTarget(), proceed());
+		return new PreparedStatementWrapper((String)thisJoinPoint.getArgs()[0], proceed(), (Connection)(thisJoinPoint.getTarget()));
+	}
+
+}

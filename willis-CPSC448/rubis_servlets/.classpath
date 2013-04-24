@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jst.server.core.container/org.eclipse.jst.server.tomcat.runtimeTarget/Apache Tomcat v7.0">
+		<attributes>
+			<attribute name="owner.project.facets" value="jst.web"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/commons-codec-1.4.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/jta-1.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/httpclient-4.2.1.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/httpclient-cache-4.2.1.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/httpcore-4.2.1.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/httpmime-4.2.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/ant.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/aspectjrt.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/aspectjtools.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/aspectjweaver.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/bcel-5.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/dom4j-1.6.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/jboss-aop.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/jboss-aop-single.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/jboss-classpool.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/jboss-classpool-scoped.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/mailapi.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/org.aspectj.matcher.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/org.eclipse.jdt.core_3.7.3.v20120119-1537.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/xml-resolver-1.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/lib/xom-1.2.7.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/RUBiS/mysql-connector-java-3.0.14-production-bin.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/RUBiS/Servlets/mysql-connector-java-3.0.14-production-bin.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/ajTracker/lib/mysql-connector-java-3.0.14-production-bin.jar">
+		<attributes>
+			<attribute name="org.eclipse.ajdt.inpath" value="org.eclipse.ajdt.inpath"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/ajTracker/lib/servlet-api.jar">
+		<attributes>
+			<attribute name="org.eclipse.ajdt.inpath" value="org.eclipse.ajdt.inpath"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/ajTracker/lib/catalina.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/ajTracker/lib/j2ee-1.4.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Sentinel/DICE/aspect/ajTracker/lib/xerces.jar"/>
+	<classpathentry kind="output" path="build/classes"/>
+</classpath>

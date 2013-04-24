@@ -1,0 +1,470 @@
+package remoting;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+
+import remoting.*;
+import edu.rice.rubis.servlets.*;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.ObjectStreamException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.GregorianCalendar;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.aspectj.lang.Signature;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.aspectj.runtime.reflect.Factory;
+
+public aspect MainAspect {
+	
+	// Variables to turn on benchmark for specific aspect
+	// Config.profile must equal to true for the following to be in effect
+	private static final boolean PROFILE_REMOTE = false;
+	// Turn on/off readResolve aspect
+	private static final boolean PROFILE_RUBIS = false;
+	// Turn on/off readResolve aspect
+	private static final boolean PROFILE_READRESOLVE = false;
+	// Turn on/off preparedStatement aspect
+	private static final boolean PROFILE_PPRDSTMT = false;
+	// PROFILE_REMOTE must be set to true in addition to PROFILE_COMM_OVHD to profile
+	// communication overhead. Since obviously a local method call would not travel
+	// through a network.
+	private static final boolean PROFILE_COMM_OVHD = false;
+	// Name of the method to be profiled
+	private static final String PROFILE_METHOD = "printHTMLheader";
+	
+	// Pointcut to for the method to be profiled.
+	pointcut profile() :
+		call(void printHTMLheader(String))
+//		call(void regionList(ServletPrinter))
+//		call(boolean categoryList(int, int, PreparedStatement, Connection, ServletPrinter))
+		;
+	
+	// Redirect URL
+	private String redirect_url = "http://localhost:9080/rubis_servlets/Remoting";
+		
+	declare parents: edu.rice.rubis.servlets.Auth implements java.io.Serializable;
+
+	public void edu.rice.rubis.servlets.SearchItemsByCategory.init() {
+		try {
+			RemotingManager.getInstance().addService(this);
+			super.init();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Pointcut for ConnectionProxy.readResolve
+	 */
+	pointcut readResolve() : 
+		execution(Object readResolve() throws ObjectStreamException) &&
+		within(ConnectionProxy);
+
+	// Timer for profiling the readResolve aspect
+	long readResolve_exe_time = 0;
+	long readResolve_start = 0;	
+	
+	// Starts the timer before entering the around advice for readResolve pointcut
+	before(): if(Config.PROFILE && PROFILE_READRESOLVE) && readResolve() {
+		System.out.println("Start profiling readResolve.");
+		readResolve_start = System.currentTimeMillis();
+		readResolve_exe_time = 0;
+	}
+
+	/**
+	 * Advice for ConnectionProxy.readResolve
+	 */
+	Object around() : readResolve() {
+		// Record running time so far
+		readResolve_exe_time = readResolve_exe_time + System.currentTimeMillis() - readResolve_start;
+		System.out.println("Reached readResolve pointcut");
+		Connection con = null;
+		try {
+			Class.forName("com.mysql.jdbc.Driver").newInstance();
+			con = DriverManager.getConnection("jdbc:mysql://localhost:3306/rubis?user=root&password=");
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+		// resets the timer so that method implementation is not counted
+		readResolve_start = System.currentTimeMillis();
+		return con;
+	}
+	
+	// Stores the total time for entering and exiting the readResolve aspect
+	// and write the results to file in CSV format
+	after() returning: if(Config.PROFILE && PROFILE_READRESOLVE) && readResolve() {
+		// stops the timer and record total time
+		readResolve_exe_time = readResolve_exe_time + System.currentTimeMillis() - readResolve_start;
+		try {
+			FileWriter read_resolve_writer = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\readResolve.csv", true);
+			read_resolve_writer.append(new Long(readResolve_exe_time).toString());
+			read_resolve_writer.append("\n");
+			read_resolve_writer.close();
+			System.out.println("End profiling readResolve.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	// Timer for profiling the rubis aspect
+	long rubis_exe_time = 0;
+	long rubis_start = 0;
+	
+	// Starts the timer before entering the around advice for rubis pointcut.
+	// Only executed for the method to be profiled (specified in profile pointcut)
+	before(): if(Config.PROFILE && PROFILE_RUBIS) && profile() {
+		System.out.println("Start profiling " + PROFILE_METHOD);
+		rubis_start = System.currentTimeMillis();
+		rubis_exe_time = 0;
+	}
+
+	// Pointcut of a list of rubis methods to be called remotely
+	pointcut rubis() :
+		//AboutMe
+		call(boolean listItem(Integer, Connection, ServletPrinter)) ||
+		call(boolean listBoughtItems(Integer, PreparedStatement, 
+				Connection, ServletPrinter)) ||
+		call(boolean listWonItems(Integer, PreparedStatement, 
+				Connection, ServletPrinter)) ||
+		call(boolean listComment(Integer, PreparedStatement, 
+				Connection, ServletPrinter)) ||
+		call(boolean listBids(Integer, String, String, 
+				PreparedStatement, Connection, ServletPrinter)) ||
+		call(int authenticate(String, String)) ||
+		//BrowseCategories
+		call(boolean categoryList(int, int, PreparedStatement, Connection, 
+				ServletPrinter)) ||
+		//BrowseRegions
+		call(void regionList(ServletPrinter)) ||
+		//RubisHttpServlet2
+		(call(Connection getConnection()) && !(target(java.sql.PreparedStatement))) ||
+		// SearchItemsByCategory
+		call(void itemList(Integer, String, int, int, ServletPrinter)) ||
+		// SearchItemsByRegion
+		call(void itemList(Integer, Integer, int, int, ServletPrinter)) ||
+		// ServletPrinter
+		call(void printFile(String)) ||
+		call(void printHTMLheader(String)) ||
+		call(void printHTMLfooter()) ||
+		call(void printHTML(String)) ||
+		call(void printHTMLHighlighted(String)) ||
+		call(void printCategory(String, int)) ||
+		call(void printCategoryByRegion(String, int, int)) ||
+		call(void printCategoryToSellItem(String, int, int)) ||
+		// Called in regionList
+		call(void printRegion(String)) ||
+		// Called in ItemList
+		call(void printItemHeader()) ||
+		call(void printItem(String, int, float, int, String)) ||
+		// Called by listbids/listBoughtItems/listItem/listWonItems 
+		call(void printItemFooter()) ||
+		// Called by listItem
+		call(void printItemFooter(String, String)) ||
+		call(void printItemDescription(int, String, String, float, 
+				float, float, int, float, int, String, int, String,
+				String, int, Connection))  ||
+		// Won't be called (listbids), need to modified query in listbids to work
+		call(void printUserBidsHeader()) ||
+		// Won't be called (listbids), need to modified query in listbids to work
+		call(void printItemUserHasBidOn(int, String, float, int, String, String, 
+				int, String, float, float, String, String)) ||
+		// Called in listWonItems (test with user732110)
+		call(void printUserWonItemHeader()) ||
+		call(void printUserWonItem(int, String, float, int, String)) ||
+		// Called in listBoughtItems, but currently disabled, works anyways
+		call(void printUserBoughtItemHeader()) ||
+		call(void printUserBoughtItem(int, String, float, int, int, String)) ||
+		// Called in listItem, thus won't ever be remotely called
+		call(void printSellHeader(String)) ||
+		// Called in listItem, thus won't ever be remotely called
+		call(void printSell(int, String, float, float, int, float, String, 
+				String, float)) ||
+		call(void printItemDescriptionToBuyNow(int, String, String, float, int, 
+				int, String, String, String, int)) ||
+		call(void printBidHistoryHeader()) ||
+		call(void printBidHistoryFooter()) ||
+		call(void printBidHistory(int, String, float, String)) ||
+		call(void printCommentHeader()) ||
+		call(void printComment(String, int, String, String)) ||
+		call(void printCommentFooter()) ||
+		// TimeManagement
+		call(String currentDateToString()) ||
+		call(String dateToString(GregorianCalendar)) ||
+		call(String diffTime(GregorianCalendar, GregorianCalendar)) ||
+		call(GregorianCalendar addDays(GregorianCalendar, int)) ||
+		// ViewBidHistory
+		call(boolean listBids(Integer, 
+							PreparedStatement, 
+							Connection, 
+							ServletPrinter)) ||
+		// ViewItem
+		// try to bid and not type in a bid
+		call(void printError(String, ServletPrinter)) ||
+		// ViewUserInfo
+		call(boolean commentList(Integer, 
+				PreparedStatement, 
+				Connection, 
+				ServletPrinter));
+
+	/**
+	 * Helper function to get primitive classes (same implementation as in RemotingManager)
+	 * @param type
+	 * @return
+	 */
+	private Class getPrimitiveClass(String type) {
+		if(type.equals("byte")) return byte.class;
+		if(type.equals("char")) return char.class;
+		if(type.equals("int")) return int.class;
+		if(type.equals("long")) return long.class;
+		if(type.equals("float")) return float.class;
+		if(type.equals("double")) return double.class;
+		throw new RuntimeException();
+	}
+	
+	/**
+	 * Helper function to get methods from superclass
+	 * 
+	 * @param target_class
+	 * @param method_name
+	 * @param args_classes
+	 * @return
+	 */
+	private Method getMethodHelper(Class target_class, String method_name, Class[] args_classes) {
+		// Get methods declared in super class
+		while (true) {
+			try {
+				return target_class.getDeclaredMethod(method_name, args_classes);
+			} catch (NoSuchMethodException e) {
+				target_class = target_class.getSuperclass();
+			}
+		}
+	}
+
+	// Main advice to redirect local calls to remote calls with RemotingManager
+	Object around() : rubis() && !cflow(call(* *.upCall(..))) {
+		
+		// Retrieves method information
+		RemotingManager remote_mgr = RemotingManager.getInstance();
+		Object target = thisJoinPoint.getTarget();
+		Object[] args = thisJoinPoint.getArgs();
+		String method_name = thisJoinPoint.getSignature().getName();
+		Class[] args_classes = new Class[args.length];
+		String sig_long = thisJoinPoint.getSignature().toLongString();
+		// Get arguments
+		String[] temp = sig_long.split("\\(")[1].split("\\)");
+		// Check methods with no argument
+		String[] args_type = new String[0];
+		if (temp.length > 0) {
+			args_type = temp[0].split(", ");
+		}
+		// Assign classes, could get away with this if RemotingManager 
+		// exposes getPrimitiveClass
+		for (int i = 0; i < args.length; i++) {
+			if (args_type[i].equals(""))
+				break;
+			try {
+				args_classes[i] = Class.forName(args_type[i]);
+			} catch (ClassNotFoundException e) {
+				args_classes[i] = getPrimitiveClass(args_type[i]);
+			}
+		}
+
+		try {			
+			Method m = null;
+			Class target_class = null;
+			if (target == null) {
+				// Target is null for static class methods, thus explicitly get the
+				// declaring type here.
+				String classname = thisJoinPoint.getStaticPart().getSignature().getDeclaringTypeName();
+				target_class = Class.forName(classname);			
+			}
+			else {
+				target_class = target.getClass();
+			}
+			m = getMethodHelper(target_class, method_name, args_classes);
+			
+			// Get fully qualified class name for static methods as
+			// required by RemotingManager.downCall
+			if (Modifier.isStatic(m.getModifiers())) {
+				target = target_class.getName();
+			}
+			
+			// Suspend timer measuring the AspectJ overhead for the method under profiling
+			// right before the execution of the method.
+			// The time includes all the computation of retrieving and constructing method
+			// information since those would not be done on local execution
+			if(Config.PROFILE && PROFILE_RUBIS && method_name.equals(PROFILE_METHOD)) {
+				long current = System.currentTimeMillis();
+				System.out.println("Interrupt profiling " + PROFILE_METHOD);
+				rubis_exe_time = rubis_exe_time + (current - rubis_start);
+			}
+
+			// Starts timing of the execution time of downCall. This includes the time
+			// for communication, execution of the method, and the computation in RemotingManager. 
+			long remoting_current = 0;
+			if (Config.PROFILE && PROFILE_REMOTE && method_name.equals(PROFILE_METHOD)) {
+				System.out.println("Start profiling downCall of " + PROFILE_METHOD);
+				remoting_current = System.currentTimeMillis();
+			}
+			
+			// Execute downCall 
+			// Default workflow when profiling is turned off.
+			Object result;
+			if (PROFILE_REMOTE || !Config.PROFILE) {
+				result = remote_mgr.downCall(redirect_url, 
+						m,
+						target,
+						args);
+			}
+			
+			// Stop the timer for downCall and write the result to file.
+			if(Config.PROFILE && PROFILE_REMOTE && method_name.equals(PROFILE_METHOD)) {
+				System.out.println("End profiling downCall of " + PROFILE_METHOD);
+				FileWriter writer1 = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\BrowseC_"+PROFILE_METHOD+"_downCall.csv", true);
+				writer1.append(new Long(System.currentTimeMillis() - remoting_current).toString());
+				writer1.append("\n");
+				writer1.close();
+			}
+			
+			// Starts timing of local call. Purpose is to compare to the remote call stats
+			// to find the overhead of RemotingManager + communication
+			long proceed = 0;
+			if (Config.PROFILE && !PROFILE_REMOTE && method_name.equals(PROFILE_METHOD)) {
+				System.out.println("Start profiling proceed() of " + PROFILE_METHOD);
+				proceed = System.currentTimeMillis();
+			}
+			
+			// Execute local method call
+			if (!PROFILE_REMOTE && Config.PROFILE) {
+				result = proceed();
+			}
+				
+			// End timing of local method call and writes the result to file.
+			if (Config.PROFILE && !PROFILE_REMOTE && method_name.equals(PROFILE_METHOD)) {
+				long t = System.currentTimeMillis() - proceed;
+				System.out.println("End profiling proceed() of " + PROFILE_METHOD);
+				FileWriter writer2 = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\BrowseC_"+PROFILE_METHOD+"_proceed.csv", true);
+				writer2.append(new Long(t).toString());
+				writer2.append("\n");
+				writer2.close();
+			}
+			
+			// Restarts timer for measuring the Aspectj overhead
+			if(Config.PROFILE && PROFILE_RUBIS && method_name.equals(PROFILE_METHOD)) {
+				System.out.println("Restart profiling " + PROFILE_METHOD);
+				rubis_start = System.currentTimeMillis();
+			}
+			
+			return result;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	// Stops the timer for measuring rubis aspect overhead and write results to CSV file
+	after() returning: if(Config.PROFILE && PROFILE_RUBIS) && profile() {
+		rubis_exe_time = rubis_exe_time + System.currentTimeMillis() - rubis_start;
+		try {
+			FileWriter writer = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\BrowseC_"+PROFILE_METHOD+"_aspectj.csv", true);
+			writer.append(new Long(rubis_exe_time).toString());
+			writer.append("\n");
+			writer.close();
+			System.out.println("End profiling " + PROFILE_METHOD);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 *  Pointcut for preparedstatements
+	 */
+	pointcut preparedStatements() :
+		call(PreparedStatement java.sql.Connection.prepareStatement(String) throws java.sql.SQLException) &&
+		!within(PreparedStatementProxy);
+	
+	long prep_stmt_exe_time = 0;
+	long prep_stmt_start = 0;
+	
+	// Starts the timer before entering the around advice for preparedStatements pointcut.
+	before(): if(Config.PROFILE && PROFILE_PPRDSTMT) && preparedStatements() {
+		System.out.println("Start profiling PreparedStatement.");
+		prep_stmt_start = System.currentTimeMillis();
+		prep_stmt_exe_time = 0;
+	}
+	
+	/**
+	 * Around advice to create a PreparedStatementWrapper whenever trying to create
+	 * a java.sql.PreparedStatement
+	 * @return
+	 */
+	Object around() : preparedStatements() && !cflow(call(* *.upCall(..))) {
+		return new PreparedStatementWrapper((String)thisJoinPoint.getArgs()[0], 
+				proceed(), (Connection)(thisJoinPoint.getTarget()));
+	}
+	
+	// Stops the timer for measuring preparedStatements aspect overhead and 
+	// write results to CSV file
+	after() returning: if(Config.PROFILE && PROFILE_PPRDSTMT) && preparedStatements() {
+		prep_stmt_exe_time = prep_stmt_exe_time + System.currentTimeMillis() - prep_stmt_start;
+		try {
+			FileWriter read_resolve_writer = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\prepstmt.csv", true);
+			read_resolve_writer.append(new Long(prep_stmt_exe_time).toString());
+			read_resolve_writer.append("\n");
+			read_resolve_writer.close();
+			System.out.println("End profiling PreparedStatement.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	// Profiling communication overhead
+	// Measure by comparing the difference between HttpClient.execute and RemotingManager.doPost
+	
+	// Measure execution time of HttpClient.execute
+	Object around(): if(Config.PROFILE && PROFILE_COMM_OVHD) && call(* HttpClient.execute(HttpUriRequest)) {
+		long time = System.currentTimeMillis();
+		Object obj = proceed();
+		time = System.currentTimeMillis() - time;
+		try {
+			FileWriter comm_ovhd_writer = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\comm_ovhd.csv", true);
+			comm_ovhd_writer.append(", ");
+			comm_ovhd_writer.append(new Long(time).toString());
+			comm_ovhd_writer.append("\n");
+			comm_ovhd_writer.close();
+			System.out.println("profiling execute.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return obj;
+	}
+	
+	// Measure execution time of RemotingManager.doPost
+	Object around(): if(Config.PROFILE && PROFILE_COMM_OVHD) && execution(* RemotingManager.doPost(HttpServletRequest, HttpServletResponse)) {
+		long time = System.currentTimeMillis();
+		Object obj = proceed();
+		time = System.currentTimeMillis() - time;
+		try {
+			FileWriter comm_ovhd_writer = new FileWriter("C:\\Users\\Sentinel\\Desktop\\UBC\\CPSC448\\data\\comm_ovhd.csv", true);
+			comm_ovhd_writer.append(new Long(time).toString());
+			comm_ovhd_writer.close();
+			System.out.println("profiling doPost.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return obj;
+	}
+}
