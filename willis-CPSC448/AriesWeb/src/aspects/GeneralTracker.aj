@@ -193,18 +193,23 @@ public aspect GeneralTracker {
 //		}
 //	}
 	
-	// WILLIS ADDED: user specified pointcut to untaint returning object
+	// ---------------------------------------------- //
+	// Untainter
+	// User specified pointcut to untaint returning object
+	// Specify the package name and the corresponding method name. Nothing else
+	// needs to be modified
 	pointcut userExclude() : 
 		within(edu.rice.rubis.servlets.BrowseCategories) &&
 		execution(String edu.rice.rubis.servlets.BrowseCategories.getname());
-	
+
 	after() returning (Object ret): userExclude() && !(myAdvice()) && !allExclude() {
 		IdentityHashMap<Object, HashSet<IDdTaintSource>> map = ReferenceMaster.getMap();
-		
+
 		if (map.containsKey(ret)) {
 			map.remove(ret);
 		}
 	}
+	// ---------------------------------------------- //
 	
     before(): (execution(* *.*(..)) || execution(*.new(..))) && !within(aspects.*) && !(myAdvice()) && !allExclude() {
     	if (!SimpleCommControl.getInstance().trackingEnabled())
