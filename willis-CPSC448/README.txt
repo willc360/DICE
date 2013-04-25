@@ -2,6 +2,9 @@ The taint analysis packages, aspects and datamanagement, are originally obtained
 
 The pointcut which untaints objects as described in the report is located in *application_name*\src\aspects\GeneralTracker.aj at line 196-212, labeled "Untainter"
 
+*appliation_name*/src/aspect/TaintedMethodTracker.aj is used to calculate the total number of application methods executed. Be aware that startup and turning off the application also counts.
+Use the "offset" parameter in MainTracer.java to deal with this.
+
 Hacks:
 
 In *application_name*\src\datamanagement/TaintLogger:
