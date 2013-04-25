@@ -499,9 +499,12 @@ public class TaintLogger {
 			addObjectElement(logRoot, "taintedObject", taintSource);
 		addObjectElement(logRoot, "callingObject", calling, false);
 		addObjectElement(logRoot, "calledObject", called, false);
-		//WILLIS ADDED
+		// Added by Willis: This is added to remove all taintlog types of NONTAINTRETURN. These elements
+		// record objects that are not tainted and come in large numbers. The purpose of this is to reduce the 
+		// number of elements in the log file for easier viewing and parsing.
 		if (!adviceType.equals("NONTAINTRETURN"))
 			logTaint(logRoot.toString());
+		// Added by Willis end
 	}
 
 //	public void logReturning(StackLocation location, String adviceType, Object taintSource, Long executionTime, Object calling, Object called, boolean debugStack) {
@@ -728,11 +731,13 @@ public class TaintLogger {
 			locationElem.addAttribute("requestURI", counterURI.getURI());
 			locationElem.addAttribute("requestRemoteAddr", counterURI.getRemoteAddr());
 		}
-		//willis added
+		// Added by Willis: the above if statement is not executed, resulting in the following
+		// three parameters not having any values. The results in the taints not showing up in the GUI tool.
+		// As a result, these three lines are added with stub values to make taints appear in GUI
 		locationElem.addAttribute("requestCounter", "1");
 		locationElem.addAttribute("requestURI", "random URI");
 		locationElem.addAttribute("requestRemoteAddr", "random remoteaddress");
-		//willis added ended
+		// willis added ended
 		locationElem.addAttribute("callerContextCounter", String.valueOf(location.callerContextCounter));
 		locationElem.addAttribute("calledContextCounter", String.valueOf(location.calledContextCounter));
 		
