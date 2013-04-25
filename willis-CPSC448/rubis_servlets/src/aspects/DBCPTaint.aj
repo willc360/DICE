@@ -105,8 +105,6 @@ public aspect DBCPTaint {
     
     after() returning (Object ret): (execution(public * *ResultSet.getObject(..)) ||
         	execution(public * *ResultSet.getString(..))) {
-    	//Willis test
-//    	System.out.println(ret);
     	if (!SimpleCommControl.getInstance().trackingEnabled())
     		return;
     	if (ret == null)
