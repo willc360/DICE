@@ -22,6 +22,8 @@ public aspect DBCPTaint {
 
 	}
     
+	// Willis hack
+	// Commented out as this causes problems in running Aries
 //    Object around(): execution(public * *ResultSet.getInt(..)) {
 //    	if (!SimpleCommControl.getInstance().trackingEnabled())
 //    		return proceed();
