@@ -12,3 +12,33 @@ for the application.
 How to set it up:
 
 -Pending...
+
+
+---
+
+Update by Willis 24/04/2013:
+
+The tool which generates CSV files are located in "DICE / TaintObjectTracer / src / MainTracer.java". It will generate 3 files.
+
+taints.csv - contains the list of methods tainted by a specific database column for each request
+methods_percent.csv - contains the proportion of application methods that are tainted by that database column
+taintedMethodByTypes.csv - records information of the type of objects which taints a specific method
+
+Some parameters need to be modified on top of this java file.
+
+directory - the directory to parse the XML taintlog files
+packageName - The name of the package for where the application methods are defined
+offset - Counts the number of methods used to startup this application
+
+-------------------------------------------
+
+NOTE: To generate the methods_percent.csv, before running this file, uncomment everything in *appliation_name*/src/aspect/TaintedMethodTracker.aj. It is best disabled like now if the interest is not to generate this file as it significantly affects performance. This aj file generates a text file which record total number of application methods executed. Some parameter also need to be set.
+
+location - should be set to the same location of "directory" above. The file name should be the same as the taintlog file
+packageName - same as "packageName" above.
+
+-------------------------------------------
+
+There is a complete working set of Aries and Rubis with taint analysis in the willis-CPSC448 folder. A README is also included in that folder which explains some hacks to get things working and also where some of the things are.
+
+
